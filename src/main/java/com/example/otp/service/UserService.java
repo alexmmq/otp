@@ -1,43 +1,89 @@
 package com.example.otp.service;
 
-import com.example.otp.dto.SignUp;
-import com.example.otp.dto.User;
-import com.example.otp.model.Role;
+import com.example.otp.dto.SignUpDTO;
+import com.example.otp.dto.UserDTO;
 import com.example.otp.model.UserModel;
-import com.example.otp.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import com.example.otp.model.Role;
+import com.example.otp.repo.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
+@RequiredArgsConstructor
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class UserService {
-    private final UserRepository userRepository;
 
-    public UserModel addUser(final SignUp signUp, final String password) {
-        final var user = UserModel.builder().username(signUp.username()).password(password)
-                .role(Role.USER).email(signUp.email()).phone(signUp.phone()).telegram(signUp.telegram())
+    private final UserRepository repository;
+
+    public UserModel addUser(final SignUpDTO request, final String encodedPassword) {
+
+        final var user = UserModel.builder()
+                .username(request.username())
+                .password(encodedPassword)
+                .role(Role.USER)
+                .email(request.email())
+                .phone(request.phone())
+                .telegramChatId(request.telegramId())
                 .build();
-        return userRepository.save(user);
+
+        return repository.save(user);
     }
 
-    public void editUser(final UserModel user) {userRepository.save(user);}
+    public void saveUser(final UserModel user) {
+        repository.save(user);
+    }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteUser(final Long id) {
-        userRepository.deleteById(id);
+        repository.deleteById(id);
     }
 
-    public User saveUser(final User user) {
+    public UserDTO saveUser(final UserDTO request) {
+        final var user = getCurrentUser();
+
+        user.setUsername(request.username());
+        user.setEmail(request.email());
+        user.setPhone(request.phone());
+        user.setTelegramChatId(request.telegramChatId());
+        repository.save(user);
+
+        return convertToResponse(user);
     }
 
-    public User getActiveUser(){
-        final String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return getByUserName(username);
+    public UserModel getByUsername(final String username) {
+        return repository.findByUsername(username);
     }
 
-    private User getByUserName(String username) {
-        return userRepository.findByUsername(username);
+    public UserDetailsService userDetailsService() {
+        return this::getByUsername;
+    }
+
+    public UserModel getCurrentUser() {
+        final var username = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        return getByUsername(username);
+    }
+
+    public List<UserDTO> getAllUsers() {
+        return repository.findByRoleNot(Role.ADMIN).stream()
+                .map(this::convertToResponse)
+                .toList();
+    }
+
+    private UserDTO convertToResponse(UserModel user) {
+        return new UserDTO(user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getTelegramChatId());
     }
 }

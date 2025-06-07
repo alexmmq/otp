@@ -1,8 +1,14 @@
 package com.example.otp.model;
-
-import com.example.otp.dto.User;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -12,6 +18,7 @@ import java.util.Date;
 
 @Data
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity(name = "otp_code")
 public class OTPCodeModel implements Serializable {
 
@@ -20,10 +27,11 @@ public class OTPCodeModel implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne
-    private User user;
+    private UserModel user;
 
     @Column(unique = true, nullable = false)
     private Long operationId;
@@ -33,12 +41,12 @@ public class OTPCodeModel implements Serializable {
     private Status status;
 
     @Column(nullable = false)
-    private String otpCode;
+    private String code;
 
     @Column(nullable = false)
     @CreationTimestamp
-    private Date createdAt;
+    private Date insertTime;
 
     @Column(nullable = false)
-    private Long expiredAt;
+    private Long expirationTime;
 }
